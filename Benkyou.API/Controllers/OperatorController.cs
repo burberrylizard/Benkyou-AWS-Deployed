@@ -340,7 +340,90 @@ namespace Benkyou.API.Controllers
             onCreated();
         }
 
-        // 4. DEACTIVATE STUDENT
+        // 4. UPDATE STUDENT
+        [HttpPut("students/{id}")]
+        public async Task<IActionResult> UpdateStudent(Guid id, [FromBody] UpdateStudentDto dto)
+        {
+            var student = await _db.Users
+                .FirstOrDefaultAsync(u => u.Id == id && u.TenantID == TenantId && u.Role == UserRole.Student);
+
+            if (student == null)
+                return NotFound(new { message = "Student not found." });
+
+            if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.FirstName) || string.IsNullOrWhiteSpace(dto.LastName))
+                return BadRequest(new { message = "First Name, Last Name, and Email are required" });
+
+            if (!student.Email.Equals(dto.Email, StringComparison.OrdinalIgnoreCase))
+            {
+                var emailExists = await _userManager.FindByEmailAsync(dto.Email);
+                if (emailExists != null && emailExists.Id != id)
+                    return BadRequest(new { message = "Email already in use by another account." });
+
+                student.Email = dto.Email;
+                student.UserName = dto.Email;
+            }
+
+            student.FirstName = dto.FirstName;
+            student.LastName = dto.LastName;
+            student.YearEnrolled = dto.YearEnrolled;
+            student.YearLevel = dto.YearLevel;
+            student.Program = dto.Program;
+
+            var updateResult = await _userManager.UpdateAsync(student);
+            if (!updateResult.Succeeded)
+                return BadRequest(new { message = string.Join("; ", updateResult.Errors.Select(e => e.Description)) });
+
+            if (!string.IsNullOrWhiteSpace(dto.StudentNumber))
+            {
+                var profile = await _db.StudentProfiles.FirstOrDefaultAsync(p => p.UserID == id);
+                if (profile != null)
+                {
+                    profile.StudentNumber = dto.StudentNumber;
+                }
+                else
+                {
+                    _db.StudentProfiles.Add(new StudentProfile
+                    {
+                        UserID = id,
+                        TenantID = TenantId,
+                        StudentNumber = dto.StudentNumber
+                    });
+                }
+                await _db.SaveChangesAsync();
+            }
+
+            await LogAction(_db, "Operator Updated Student", "User", id.ToString());
+            return Ok(new { success = true, message = "Student updated successfully." });
+        }
+
+        // 5. DELETE STUDENT
+        [HttpDelete("students/{id}")]
+        public async Task<IActionResult> DeleteStudent(Guid id)
+        {
+            var student = await _db.Users
+                .FirstOrDefaultAsync(u => u.Id == id && u.TenantID == TenantId && u.Role == UserRole.Student);
+
+            if (student == null)
+                return NotFound(new { message = "Student not found." });
+
+            // Delete associated student profile and enrollments first to maintain referential integrity
+            var profiles = await _db.StudentProfiles.Where(p => p.UserID == id).ToListAsync();
+            _db.StudentProfiles.RemoveRange(profiles);
+
+            var enrollments = await _db.Enrollments.Where(e => e.StudentID == id).ToListAsync();
+            _db.Enrollments.RemoveRange(enrollments);
+
+            await _db.SaveChangesAsync();
+
+            var deleteResult = await _userManager.DeleteAsync(student);
+            if (!deleteResult.Succeeded)
+                return BadRequest(new { message = string.Join("; ", deleteResult.Errors.Select(e => e.Description)) });
+
+            await LogAction(_db, "Operator Deleted Student", "User", id.ToString());
+            return Ok(new { success = true, message = "Student deleted successfully." });
+        }
+
+        // 6. DEACTIVATE STUDENT
         [HttpPut("students/{id}/deactivate")]
         public async Task<IActionResult> DeactivateStudent(Guid id)
         {
@@ -357,7 +440,7 @@ namespace Benkyou.API.Controllers
             return Ok(new { success = true });
         }
 
-        // 5. ACTIVATE STUDENT
+        // 7. ACTIVATE STUDENT
         [HttpPut("students/{id}/activate")]
         public async Task<IActionResult> ActivateStudent(Guid id)
         {

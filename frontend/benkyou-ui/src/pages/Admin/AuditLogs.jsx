@@ -4,11 +4,73 @@ import { ADMIN_THEME, getNav, ADMIN_STYLES as s } from "./adminConfig";
 import { useApiData } from "../../hooks/useApiData";
 import { getAuditLogs } from "../../services/auditLogService";
 import { useAuth } from "../../context/AuthContext";
+import Pagination from "../../components/shared/Pagination";
 
 export default function AuditLogs() {
   const { user: authUser } = useAuth();
   const { data: logs, isLoading, error } = useApiData(getAuditLogs);
   const [filter, setFilter] = useState("All");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  const handleExportPdf = () => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      alert("Please allow popups to export PDF");
+      return;
+    }
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Admin Audit Logs Export</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 24px; color: #1e293b; }
+            h2 { font-size: 20px; color: #0f172a; margin-bottom: 4px; }
+            p { font-size: 13px; color: #64748b; margin-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            th, td { border: 1px solid #cbd5e1; padding: 8px 12px; text-align: left; font-size: 12px; }
+            th { background-color: #f1f5f9; font-weight: 600; color: #334155; }
+            tr:nth-child(even) { background-color: #f8fafc; }
+            .action { font-weight: 600; }
+          </style>
+        </head>
+        <body>
+          <h2>Admin Audit Logs Report</h2>
+          <p>Exported on ${new Date().toLocaleString()} · Filter: ${filter} · Total Entries: ${filteredLogs.length}</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>User</th>
+                <th>Action</th>
+                <th>Entity</th>
+                <th>IP Address</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredLogs.map(log => `
+                <tr>
+                  <td>${new Date(log.createdAt).toLocaleString()}</td>
+                  <td>${log.userEmail}</td>
+                  <td class="action">${log.action}</td>
+                  <td>${log.entityType} ${log.targetName ? `(${log.targetName})` : log.entityID ? `(${log.entityID})` : ""}</td>
+                  <td>${log.ipAddress}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
+  };
 
   if (isLoading) return (
     <DashboardLayout theme={ADMIN_THEME} role="Admin" navGroups={getNav("Audit Logs")} headerTitle="Audit Logs" headerSub="Loading...">
@@ -38,6 +100,8 @@ export default function AuditLogs() {
     : displayLogs.filter(log => !isSecurity(log.action));
 
   const securityCount = displayLogs.filter(log => isSecurity(log.action)).length;
+
+  const paginatedLogs = filteredLogs.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const getActionStyle = (action) => {
     const lower = action.toLowerCase();
@@ -83,7 +147,7 @@ export default function AuditLogs() {
           <span style={{ fontSize: 20 }}>🛡️</span>
           <span><strong>{securityCount}</strong> security {securityCount === 1 ? "event" : "events"} detected — including lockout attempts, suspicious logins, and account unlocks.</span>
           <button
-            onClick={() => setFilter("Security")}
+            onClick={() => { setFilter("Security"); setCurrentPage(1); }}
             style={{
               marginLeft: "auto",
               background: "#ef4444",
@@ -108,7 +172,7 @@ export default function AuditLogs() {
             {["All", "Security", "General"].map((tab) => (
               <button 
                 key={tab} 
-                onClick={() => setFilter(tab)} 
+                onClick={() => { setFilter(tab); setCurrentPage(1); }} 
                 style={{ 
                   padding: "6px 14px", 
                   borderRadius: 20, 
@@ -123,7 +187,7 @@ export default function AuditLogs() {
                 {tab} {tab === "Security" && securityCount > 0 ? `(${securityCount})` : ""}
               </button>
             ))}
-            <button style={{ ...s.outlineBtn, marginLeft: 8 }} onClick={() => window.print()}>Export Log</button>
+            <button style={{ ...s.outlineBtn, marginLeft: 8 }} onClick={handleExportPdf}>Export Log</button>
           </div>
         </div>
         <table style={s.table}>
@@ -142,7 +206,7 @@ export default function AuditLogs() {
                 {filter === "Security" ? "No security events found." : "No activity logs found."}
               </td></tr>
             ) : (
-              filteredLogs.map((log) => {
+              paginatedLogs.map((log) => {
                 const actionStyle = getActionStyle(log.action);
                 const isSecurityEvent = isSecurity(log.action);
                 return (
@@ -178,7 +242,15 @@ export default function AuditLogs() {
             )}
           </tbody>
         </table>
+
+        <Pagination
+          totalItems={filteredLogs.length}
+          itemsPerPage={itemsPerPage}
+          currentPage={currentPage}
+          onChange={setCurrentPage}
+        />
       </div>
     </DashboardLayout>
   );
 }
+

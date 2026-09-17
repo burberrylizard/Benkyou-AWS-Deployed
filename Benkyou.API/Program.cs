@@ -540,12 +540,12 @@ using (var scope = app.Services.CreateScope())
 app.UseSwagger();
 app.UseSwaggerUI();
 
+// CORS must be evaluated before HttpsRedirection & RateLimiter so all preflights and redirects carry CORS headers
+app.UseCors(FrontendCorsPolicy);
+
 app.UseHttpsRedirection();
 
 app.UseRouting();
-
-// CORS must be evaluated before RateLimiter so that 429 rate-limited responses still receive CORS headers
-app.UseCors(FrontendCorsPolicy);
 
 app.UseRateLimiter();
 

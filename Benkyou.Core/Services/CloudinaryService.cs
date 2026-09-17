@@ -132,46 +132,22 @@ namespace Benkyou.Core.Services
 
                 using var stream = file.OpenReadStream();
 
-                if (extension == ".pdf")
+                var uploadParams = new RawUploadParams
                 {
-                    // PDFs are uploaded as image resources to enable inline browser viewing with correct MIME type
-                    var uploadParams = new ImageUploadParams
-                    {
-                        File = new FileDescription(file.FileName, stream),
-                        Folder = "course-contents",
-                        PublicId = $"file_{Guid.NewGuid()}"
-                    };
+                    File = new FileDescription(file.FileName, stream),
+                    Folder = "course-contents",
+                    PublicId = $"file_{Guid.NewGuid()}{extension}"
+                };
 
-                    var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+                var uploadResult = await _cloudinary.UploadAsync(uploadParams);
 
-                    if (uploadResult.Error != null)
-                    {
-                        _logger.LogError("Cloudinary PDF upload failed: {Message}", uploadResult.Error.Message);
-                        return (false, null, null, $"Cloudinary upload failed: {uploadResult.Error.Message}");
-                    }
-
-                    return (true, uploadResult.SecureUrl.ToString(), uploadResult.PublicId, null);
-                }
-                else
+                if (uploadResult.Error != null)
                 {
-                    // PPT, PPTX, DOCX are uploaded as raw resources (triggering a download)
-                    var uploadParams = new RawUploadParams
-                    {
-                        File = new FileDescription(file.FileName, stream),
-                        Folder = "course-contents",
-                        PublicId = $"file_{Guid.NewGuid()}{extension}"
-                    };
-
-                    var uploadResult = await _cloudinary.UploadAsync(uploadParams);
-
-                    if (uploadResult.Error != null)
-                    {
-                        _logger.LogError("Cloudinary raw file upload failed: {Message}", uploadResult.Error.Message);
-                        return (false, null, null, $"Cloudinary upload failed: {uploadResult.Error.Message}");
-                    }
-
-                    return (true, uploadResult.SecureUrl.ToString(), uploadResult.PublicId, null);
+                    _logger.LogError("Cloudinary course file upload failed: {Message}", uploadResult.Error.Message);
+                    return (false, null, null, $"Cloudinary upload failed: {uploadResult.Error.Message}");
                 }
+
+                return (true, uploadResult.SecureUrl.ToString(), uploadResult.PublicId, null);
             }
             catch (Exception ex)
             {

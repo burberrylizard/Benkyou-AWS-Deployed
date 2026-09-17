@@ -52,6 +52,22 @@ export function AuthProvider({ children }) {
       navigate("/login", { replace: true });
     }
 
+    function updateUserSession(updatedFields) {
+      if (!session || !session.user) return;
+      const updatedUser = { ...session.user, ...updatedFields };
+      if (updatedFields.name) {
+        updatedUser.name = updatedFields.name;
+      } else if (updatedFields.firstName || updatedFields.lastName) {
+        const first = updatedFields.firstName !== undefined ? updatedFields.firstName : (session.user.firstName || "");
+        const last = updatedFields.lastName !== undefined ? updatedFields.lastName : (session.user.lastName || "");
+        updatedUser.name = `${first} ${last}`.trim();
+      }
+      const nextSession = { ...session, user: updatedUser };
+      localStorage.setItem("benkyou:session", JSON.stringify(nextSession));
+      setSession(nextSession);
+      window.dispatchEvent(new Event("benkyou:session-changed"));
+    }
+
     return {
       session,
       token: session?.token || null,
@@ -61,6 +77,7 @@ export function AuthProvider({ children }) {
       isAuthenticated: !!session,
       signIn,
       signOut,
+      updateUserSession,
       dashboardPath: buildDashboardPath(session?.role, session?.tenantCode),
     };
   }, [navigate, session]);

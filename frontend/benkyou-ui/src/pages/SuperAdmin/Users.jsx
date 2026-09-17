@@ -6,6 +6,7 @@ import { getUsers, toggleUserStatus, deleteUser, unlockUser } from "../../servic
 import { useAuth } from "../../context/AuthContext";
 import { getInitials } from "../../utils/session";
 import { apiRequest } from "../../api/client";
+import Pagination from "../../components/shared/Pagination";
 
 export default function AllUsers() {
   const { user: authUser } = useAuth();
@@ -16,11 +17,15 @@ export default function AllUsers() {
   const [roleFilter, setRoleFilter] = useState("All");
   const [orgFilter, setOrgFilter] = useState("All Organizations");
   const [activeMenu, setActiveMenu] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const ROLE_MAP = { 
     1: "Admin", "1": "Admin", "Admin": "Admin",
     2: "Instructor", "2": "Instructor", "Instructor": "Instructor",
-    3: "Student", "3": "Student", "Student": "Student"
+    3: "Student", "3": "Student", "Student": "Student",
+    4: "Member", "4": "Member", "Member": "Member",
+    5: "Operator", "5": "Operator", "Operator": "Operator"
   };
   
   const displayUsers = (users || []).map(u => ({
@@ -106,7 +111,7 @@ export default function AllUsers() {
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
             <select 
               value={orgFilter}
-              onChange={(e) => setOrgFilter(e.target.value)}
+              onChange={(e) => { setOrgFilter(e.target.value); setCurrentPage(1); }}
               style={{
                 background: "#0f172a", border: "1px solid #334155", borderRadius: 8, padding: "8px 12px",
                 color: "#cbd5e1", fontSize: 13, outline: "none"
@@ -116,8 +121,8 @@ export default function AllUsers() {
               {(orgsData || []).map(o => <option key={o.tenantID}>{o.name}</option>)}
             </select>
             <div style={{ display: "flex", gap: 8 }}>
-              {["All", "Admin", "Instructor", "Student"].map((tab) => (
-                <button key={tab} onClick={() => setRoleFilter(tab)} style={{
+              {["All", "Admin", "Instructor", "Student", "Operator"].map((tab) => (
+                <button key={tab} onClick={() => { setRoleFilter(tab); setCurrentPage(1); }} style={{
                   padding: "6px 14px", borderRadius: 20, fontSize: 13, fontWeight: 500, cursor: "pointer",
                   background: roleFilter === tab ? SA_THEME.primary : "transparent",
                   color: roleFilter === tab ? "#fff" : "#94a3b8",
@@ -144,7 +149,7 @@ export default function AllUsers() {
             {filtered.length === 0 ? (
                 <tr><td colSpan="6" style={{ textAlign: "center", padding: 40, color: "#94a3b8" }}>No users found.</td></tr>
             ) : (
-                filtered.map((u, i) => (
+                filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((u, i) => (
                 <tr key={i} style={s.tr}>
                     <td style={s.td}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -194,6 +199,13 @@ export default function AllUsers() {
             )}
           </tbody>
         </table>
+
+        <Pagination
+          totalItems={filtered.length}
+          itemsPerPage={itemsPerPage}
+          currentPage={currentPage}
+          onChange={setCurrentPage}
+        />
       </div>
     </DashboardLayout>
   );
@@ -203,7 +215,8 @@ function RoleBadge({ role }) {
   const c = { 
     Admin: { bg: "rgba(30, 58, 95, 0.2)", color: "#7eb3e8", border: "rgba(126, 179, 232, 0.3)" }, 
     Instructor: { bg: "rgba(139, 92, 246, 0.1)", color: "#a78bfa", border: "rgba(167, 139, 250, 0.2)" }, 
-    Student: { bg: "rgba(16, 185, 129, 0.1)", color: "#34d399", border: "rgba(52, 211, 153, 0.2)" } 
+    Student: { bg: "rgba(16, 185, 129, 0.1)", color: "#34d399", border: "rgba(52, 211, 153, 0.2)" },
+    Operator: { bg: "rgba(236, 72, 153, 0.1)", color: "#f472b6", border: "rgba(244, 114, 182, 0.3)" }
   };
   const d = c[role] || c.Student;
   return <span style={{ background: d.bg, color: d.color, border: `1px solid ${d.border}`, padding: "4px 10px", borderRadius: 12, fontSize: 12, fontWeight: 500 }}>{role}</span>;

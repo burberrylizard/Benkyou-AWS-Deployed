@@ -209,6 +209,11 @@ namespace Benkyou.Core.Services
             var assessment = await _db.Assessments.FindAsync(assessmentId);
             if (assessment == null) return (null, "Assessment not found.");
             if (assessment.Status != "Published") return (null, "Assessment is not published yet.");
+
+            var isEnrolled = await _db.Enrollments
+                .AnyAsync(e => e.StudentID == studentId && e.CourseID == assessment.CourseID && e.Status == "Active");
+            if (!isEnrolled) return (null, "You are not enrolled in the course for this assessment.");
+
             if (assessment.DueDate.HasValue && DateTime.UtcNow > assessment.DueDate.Value)
                 return (null, "This assessment is closed. The due date has passed.");
 

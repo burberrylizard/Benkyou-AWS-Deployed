@@ -29,6 +29,16 @@ public class AssessmentsController(BenkyouDbContext db, AssessmentBuilderService
 
         var userId = UserId;
 
+        if (User.IsInRole("Student"))
+        {
+            var enrolledCourseIds = await _db.Enrollments
+                .Where(e => e.StudentID == userId && e.Status == "Active")
+                .Select(e => e.CourseID)
+                .ToListAsync();
+
+            query = query.Where(a => enrolledCourseIds.Contains(a.CourseID) && a.Status == "Published");
+        }
+
         var data = await query
             .OrderByDescending(a => a.CreatedAt)
             .Select(a => new
@@ -87,6 +97,17 @@ public class AssessmentsController(BenkyouDbContext db, AssessmentBuilderService
     {
         var result = await _svc.GetAssessmentWithQuestionsAsync(id);
         if (result == null) return NotFound("Assessment not found");
+
+        if (User.IsInRole("Student"))
+        {
+            var isEnrolled = await _db.Enrollments
+                .AnyAsync(e => e.StudentID == UserId && e.CourseID == result.CourseID && e.Status == "Active");
+
+            if (!isEnrolled)
+            {
+                return Forbid();
+            }
+        }
 
         return Ok(new
         {

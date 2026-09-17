@@ -409,7 +409,15 @@ public class UsersController(
 
         await LogAction(_db, "Updated Own Profile", "User", user.Id.ToString());
 
-        return Ok(new { success = true, firstName = user.FirstName, lastName = user.LastName });
+        return Ok(new { 
+            success = true, 
+            firstName = user.FirstName, 
+            lastName = user.LastName,
+            name = $"{user.FirstName} {user.LastName}".Trim(),
+            yearEnrolled = user.YearEnrolled,
+            yearLevel = user.YearLevel,
+            program = user.Program 
+        });
     }
 
     // SELF CHANGE PASSWORD (validates current password)

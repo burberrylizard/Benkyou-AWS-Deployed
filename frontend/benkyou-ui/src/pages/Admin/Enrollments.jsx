@@ -8,6 +8,7 @@ import { getCourses } from "../../services/courseService";
 import { useAuth } from "../../context/AuthContext";
 import Modal from "../../components/shared/UI/Modal";
 import Button from "../../components/shared/UI/Button";
+import Pagination from "../../components/shared/Pagination";
 
 export default function Enrollments() {
   const { user: authUser } = useAuth();
@@ -20,6 +21,8 @@ export default function Enrollments() {
   const [showModal, setShowModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState({ studentID: "", courseID: "" });
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Get unique course titles for filter
   const courseNames = useMemo(() => {
@@ -36,6 +39,8 @@ export default function Enrollments() {
     if (courseFilter !== "All") result = result.filter(e => e.courseTitle === courseFilter);
     return result;
   }, [enrollments, statusFilter, courseFilter]);
+
+  const paginatedEnrollments = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   if (isLoading) return (
     <DashboardLayout theme={ADMIN_THEME} role="Admin" navGroups={getNav("Enrollments")} headerTitle="Enrollments" headerSub="Loading...">
@@ -96,7 +101,7 @@ export default function Enrollments() {
             {["All", "Active", "Completed", "Dropped"].map((tab) => (
               <button 
                 key={tab} 
-                onClick={() => setStatusFilter(tab)} 
+                onClick={() => { setStatusFilter(tab); setCurrentPage(1); }} 
                 style={{ 
                   padding: "6px 14px", borderRadius: 20, fontSize: 13, fontWeight: 500, cursor: "pointer", 
                   background: statusFilter === tab ? "#185fa5" : "transparent", 
@@ -111,7 +116,7 @@ export default function Enrollments() {
             {/* Course filter dropdown */}
             <select 
               value={courseFilter} 
-              onChange={e => setCourseFilter(e.target.value)}
+              onChange={e => { setCourseFilter(e.target.value); setCurrentPage(1); }}
               style={{ 
                 padding: "6px 12px", borderRadius: 8, fontSize: 13, 
                 border: "1px solid #e5e7eb", background: "#fff", color: "#374151",
@@ -141,7 +146,7 @@ export default function Enrollments() {
             {filtered.length === 0 ? (
               <tr><td colSpan="5" style={{ textAlign: "center", padding: 40, color: "#9ca3af" }}>No enrollments found.</td></tr>
             ) : (
-              filtered.map((e, i) => (
+              paginatedEnrollments.map((e, i) => (
                 <tr key={i} style={s.tr}>
                   <td style={s.td}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -165,6 +170,13 @@ export default function Enrollments() {
             )}
           </tbody>
         </table>
+
+        <Pagination
+          totalItems={filtered.length}
+          itemsPerPage={itemsPerPage}
+          currentPage={currentPage}
+          onChange={setCurrentPage}
+        />
       </div>
 
       <Modal
@@ -214,3 +226,4 @@ const f = {
   label: { fontSize: 11, fontWeight: 600, color: "#64748b", letterSpacing: "0.05em" },
   input: { padding: "10px 14px", border: "1px solid #e2e8f0", borderRadius: 8, outline: "none", fontSize: 14 }
 };
+

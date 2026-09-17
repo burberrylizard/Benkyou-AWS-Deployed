@@ -6,6 +6,7 @@ import { useApiData } from "../../hooks/useApiData";
 import { getInstructorGrades } from "../../services/gradeService";
 import { useAuth } from "../../context/AuthContext";
 import { useTenant } from "../../context/TenantContext";
+import Pagination from "../../components/shared/Pagination";
 
 export default function InstructorGrades() {
   const { user: authUser } = useAuth();
@@ -13,6 +14,8 @@ export default function InstructorGrades() {
   const { tenantPath } = useTenant();
   const { data: grades, isLoading, error } = useApiData(getInstructorGrades, [], []);
   const [selectedCourse, setSelectedCourse] = useState("All Courses");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   if (isLoading) return (
     <DashboardLayout theme={INST_THEME} role="Instructor" navGroups={getNav("Grade Book")} headerTitle="Grade Book" headerSub="Loading...">
@@ -34,6 +37,8 @@ export default function InstructorGrades() {
     ? grades 
     : grades.filter(g => g.courseTitle === selectedCourse);
 
+  const paginatedGrades = filteredGrades.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   return (
     <DashboardLayout 
       theme={INST_THEME} 
@@ -50,7 +55,7 @@ export default function InstructorGrades() {
             <span style={{ fontSize: 13, color: "#7a8ba3", fontWeight: 500 }}>Course:</span>
             <select
               value={selectedCourse}
-              onChange={(e) => setSelectedCourse(e.target.value)}
+              onChange={(e) => { setSelectedCourse(e.target.value); setCurrentPage(1); }}
               style={{
                 background: "#0b1929",
                 color: "#e8edf4",
@@ -87,7 +92,7 @@ export default function InstructorGrades() {
             {filteredGrades.length === 0 ? (
               <tr><td colSpan="7" style={{ textAlign: "center", padding: 40, color: "#5a7a9a" }}>No student grades found.</td></tr>
             ) : (
-              filteredGrades.map((g) => {
+              paginatedGrades.map((g) => {
                 const attemptId = g.attemptID || g.attemptId;
                 return (
                   <tr key={g.assessmentResultID} style={s.tr}>
@@ -145,6 +150,12 @@ export default function InstructorGrades() {
             )}
           </tbody>
         </table>
+        <Pagination
+          totalItems={filteredGrades.length}
+          itemsPerPage={itemsPerPage}
+          currentPage={currentPage}
+          onChange={setCurrentPage}
+        />
       </div>
     </DashboardLayout>
   );

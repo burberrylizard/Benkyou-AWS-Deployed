@@ -1,14 +1,18 @@
+import { useState } from "react";
 import DashboardLayout from "../../components/shared/DashboardLayout";
 import { INST_THEME, getNav, INST_STYLES as s } from "./instructorConfig";
 import { useApiData } from "../../hooks/useApiData";
 import { getEnrollments } from "../../services/enrollmentService";
 import { useAuth } from "../../context/AuthContext";
+import Pagination from "../../components/shared/Pagination";
 
 const COLORS = ["#3b82f6", "#10b981", "#8b5cf6", "#f59e0b", "#ec4899", "#06b6d4", "#f97316", "#a855f7"];
 
 export default function StudentProgress() {
   const { user: authUser } = useAuth();
   const { data: enrollments, isLoading, error } = useApiData(getEnrollments, [], []);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   if (isLoading) return (
     <DashboardLayout theme={INST_THEME} role="Instructor" navGroups={getNav("Class Progress")} headerTitle="Class Progress" headerSub="Loading...">
@@ -23,6 +27,9 @@ export default function StudentProgress() {
       </div>
     </DashboardLayout>
   );
+
+  const list = enrollments || [];
+  const paginatedList = list.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const stats = [
     { label: "Total students", value: enrollments.length.toString(), sub: "Across all courses", subColor: "#7a8ba3" },
@@ -66,10 +73,10 @@ export default function StudentProgress() {
             </tr>
           </thead>
           <tbody>
-            {enrollments.length === 0 ? (
+            {list.length === 0 ? (
               <tr><td colSpan="5" style={{ textAlign: "center", padding: 40, color: "#5a7a9a" }}>No students enrolled in your courses yet.</td></tr>
             ) : (
-              enrollments.map((e, i) => {
+              paginatedList.map((e, i) => {
                 const color = COLORS[i % COLORS.length];
                 const initials = e.studentName?.split(' ').map(n => n[0]).join('') || "S";
                 return (
@@ -100,6 +107,13 @@ export default function StudentProgress() {
             )}
           </tbody>
         </table>
+
+        <Pagination
+          totalItems={list.length}
+          itemsPerPage={itemsPerPage}
+          currentPage={currentPage}
+          onChange={setCurrentPage}
+        />
       </div>
     </DashboardLayout>
   );

@@ -47,25 +47,27 @@ export default function AssessmentBuilder() {
 
   useEffect(() => { loadAssessment(); }, [id]);
 
-  const loadAssessment = async () => {
+  const loadAssessment = async (keepLocalSettings = false) => {
     try {
       const data = await getAssessmentById(id);
       setAssessment(data);
-      const limit = data.timeLimitMinutes != null ? data.timeLimitMinutes : (data.TimeLimitMinutes != null ? data.TimeLimitMinutes : 30);
-      const attempts = data.maxAttempts != null ? data.maxAttempts : (data.MaxAttempts != null ? data.MaxAttempts : 1);
-      const passMark = data.passingScore != null ? data.passingScore : (data.PassingScore != null ? data.PassingScore : 60);
-      const shuffle = data.shuffleQuestions != null ? data.shuffleQuestions : (data.ShuffleQuestions != null ? data.ShuffleQuestions : false);
-      const showAns = data.showAnswersAfter || data.ShowAnswersAfter || "Submission";
-      const due = data.dueDate || data.DueDate || "";
+      if (!keepLocalSettings) {
+        const limit = data.timeLimitMinutes != null ? data.timeLimitMinutes : (data.TimeLimitMinutes != null ? data.TimeLimitMinutes : 30);
+        const attempts = data.maxAttempts != null ? data.maxAttempts : (data.MaxAttempts != null ? data.MaxAttempts : 1);
+        const passMark = data.passingScore != null ? data.passingScore : (data.PassingScore != null ? data.PassingScore : 60);
+        const shuffle = data.shuffleQuestions != null ? data.shuffleQuestions : (data.ShuffleQuestions != null ? data.ShuffleQuestions : false);
+        const showAns = data.showAnswersAfter || data.ShowAnswersAfter || "Submission";
+        const due = data.dueDate || data.DueDate || "";
 
-      setSettings({
-        timeLimitMinutes: limit,
-        maxAttempts: attempts,
-        passMarkPercent: passMark,
-        shuffleQuestions: shuffle,
-        showAnswersAfter: showAns,
-        dueDate: toLocalDatetimeString(due)
-      });
+        setSettings({
+          timeLimitMinutes: limit,
+          maxAttempts: attempts,
+          passMarkPercent: passMark,
+          shuffleQuestions: shuffle,
+          showAnswersAfter: showAns,
+          dueDate: toLocalDatetimeString(due)
+        });
+      }
     } catch { setFeedback({ type: "error", msg: "Failed to load assessment" }); }
     finally { setLoading(false); }
   };
@@ -78,7 +80,7 @@ export default function AssessmentBuilder() {
         dueDate: settings.dueDate ? new Date(settings.dueDate).toISOString() : null
       });
       setFeedback({ type: "success", msg: "Settings saved!" });
-      loadAssessment();
+      loadAssessment(false);
     } catch { setFeedback({ type: "error", msg: "Failed to save settings" }); }
     finally { setSaving(false); setTimeout(() => setFeedback({ type: "", msg: "" }), 3000); }
   };
@@ -89,7 +91,7 @@ export default function AssessmentBuilder() {
     try {
       await publishAssessment(id);
       setFeedback({ type: "success", msg: "Assessment published!" });
-      loadAssessment();
+      loadAssessment(false);
     } catch { setFeedback({ type: "error", msg: "Failed to publish" }); }
     finally { setPublishing(false); setTimeout(() => setFeedback({ type: "", msg: "" }), 3000); }
   };
@@ -98,7 +100,7 @@ export default function AssessmentBuilder() {
     if (!confirm("Delete this question?")) return;
     try {
       await deleteQuestion(qId);
-      loadAssessment();
+      loadAssessment(true);
     } catch { alert("Failed to delete question"); }
   };
 
@@ -245,7 +247,7 @@ export default function AssessmentBuilder() {
           assessmentId={parseInt(id)}
           editing={modal.editing}
           onClose={() => setModal({ open: false, editing: null })}
-          onSaved={() => { setModal({ open: false, editing: null }); loadAssessment(); }}
+          onSaved={() => { setModal({ open: false, editing: null }); loadAssessment(true); }}
         />
       )}
     </DashboardLayout>

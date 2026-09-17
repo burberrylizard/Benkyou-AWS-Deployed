@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../../components/shared/DashboardLayout";
 import { INST_THEME, getNav, INST_STYLES as s } from "./instructorConfig";
@@ -5,12 +6,15 @@ import { useApiData } from "../../hooks/useApiData";
 import { getPendingReviewAttempts } from "../../services/assessmentService";
 import { useAuth } from "../../context/AuthContext";
 import { useTenant } from "../../context/TenantContext";
+import Pagination from "../../components/shared/Pagination";
 
 export default function Submissions() {
   const { user: authUser } = useAuth();
   const navigate = useNavigate();
   const { tenantPath } = useTenant();
   const { data: submissions, isLoading, error } = useApiData(getPendingReviewAttempts, [], []);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   if (isLoading) return (
     <DashboardLayout theme={INST_THEME} role="Instructor" navGroups={getNav("Submissions")} headerTitle="Submissions" headerSub="Loading...">
@@ -25,6 +29,9 @@ export default function Submissions() {
       </div>
     </DashboardLayout>
   );
+
+  const list = submissions || [];
+  const paginatedSubmissions = list.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const stats = [
     { label: "Pending Reviews", value: submissions.length.toString(), sub: "Awaiting grading", subColor: "#f59e0b" },
@@ -67,10 +74,10 @@ export default function Submissions() {
             </tr>
           </thead>
           <tbody>
-            {submissions.length === 0 ? (
+            {list.length === 0 ? (
               <tr><td colSpan="6" style={{ textAlign: "center", padding: 40, color: "#5a7a9a" }}>No pending submissions found.</td></tr>
             ) : (
-              submissions.map((sub) => {
+              paginatedSubmissions.map((sub) => {
                 const attemptId = sub.studentAttemptID || sub.studentAttemptId;
                 return (
                   <tr key={attemptId} style={s.tr}>
@@ -105,6 +112,13 @@ export default function Submissions() {
             )}
           </tbody>
         </table>
+
+        <Pagination
+          totalItems={list.length}
+          itemsPerPage={itemsPerPage}
+          currentPage={currentPage}
+          onChange={setCurrentPage}
+        />
       </div>
     </DashboardLayout>
   );

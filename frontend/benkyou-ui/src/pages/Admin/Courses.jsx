@@ -6,6 +6,7 @@ import { getCourses, createCourse, togglePublish, toggleCourseHide } from "../..
 import { useAuth } from "../../context/AuthContext";
 import CourseModal from "../../components/shared/UI/CourseModal";
 import Button from "../../components/shared/UI/Button";
+import Pagination from "../../components/shared/Pagination";
 
 export default function Courses() {
   const { user: authUser } = useAuth();
@@ -17,6 +18,8 @@ export default function Courses() {
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [actionLoading, setActionLoading] = useState(null);
   const [publishFeedback, setPublishFeedback] = useState({ id: null, msg: "" });
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const displayCourses = courses || [];
 
@@ -30,6 +33,8 @@ export default function Courses() {
   const filtered = categoryFilter === "All" 
     ? displayCourses 
     : displayCourses.filter(c => c.categoryName === categoryFilter);
+
+  const paginatedCourses = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const handleSave = async (formData) => {
     setIsSubmitting(true);
@@ -106,7 +111,7 @@ export default function Courses() {
             {/* Category filter */}
             <select 
               value={categoryFilter} 
-              onChange={e => setCategoryFilter(e.target.value)}
+              onChange={e => { setCategoryFilter(e.target.value); setCurrentPage(1); }}
               style={{ padding: "6px 12px", borderRadius: 8, fontSize: 13, border: "1px solid #e5e7eb", background: "#fff", color: "#374151", cursor: "pointer", outline: "none" }}
             >
               <option value="All">All categories</option>
@@ -121,71 +126,80 @@ export default function Courses() {
         {isLoading ? (
           <div style={{ padding: 40, textAlign: "center", color: "#6b7280" }}>Loading courses...</div>
         ) : (
-          <table style={s.table}>
-            <thead>
-              <tr>
-                <th style={s.th}>COURSE</th>
-                <th style={s.th}>CATEGORY</th>
-                <th style={s.th}>PUBLISHED</th>
-                <th style={s.th}>VISIBILITY</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.length === 0 ? (
+          <>
+            <table style={s.table}>
+              <thead>
                 <tr>
-                  <td colSpan="4" style={{ ...s.td, textAlign: "center", padding: 40, color: "#9ca3af" }}>No courses found</td>
+                  <th style={s.th}>COURSE</th>
+                  <th style={s.th}>CATEGORY</th>
+                  <th style={s.th}>PUBLISHED</th>
+                  <th style={s.th}>VISIBILITY</th>
                 </tr>
-              ) : (
-                filtered.map((c) => (
-                  <tr key={c.courseID} style={s.tr}>
-                    <td style={s.td}>
-                      <div style={{ fontWeight: 600, color: "#1e293b" }}>{c.title}</div>
-                      <div style={{ fontSize: 12, color: "#64748b" }}>
-                        {c.sectionCount || 0} sections · {c.enrolledCount || 0} enrolled
-                      </div>
-                    </td>
-                    <td style={s.td}>
-                      <span style={{ background: "#f1f5f9", padding: "4px 10px", borderRadius: 8, fontSize: 12, color: "#475569" }}>
-                        {c.categoryName}
-                      </span>
-                    </td>
-                    {/* Publish Toggle Switch */}
-                    <td style={s.td}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <ToggleSwitch
-                          checked={c.isPublished}
-                          disabled={actionLoading === c.courseID}
-                          onChange={() => handleTogglePublish(c.courseID)}
-                        />
-                        <span style={{ fontSize: 12, color: c.isPublished ? "#059669" : "#b45309", fontWeight: 500 }}>
-                          {c.isPublished ? "Published" : "Unpublished"}
-                        </span>
-                        {publishFeedback.id === c.courseID && (
-                          <span style={{ fontSize: 11, color: publishFeedback.msg === "✓" ? "#10b981" : "#ef4444", fontWeight: 600 }}>
-                            {publishFeedback.msg}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td style={s.td}>
-                      {/* Hide toggle */}
-                      <button 
-                        onClick={() => handleToggleHide(c.courseID)}
-                        disabled={actionLoading === c.courseID}
-                        style={{ 
-                          padding: "4px 10px", borderRadius: 12, fontSize: 11, fontWeight: 500, cursor: "pointer", border: "none",
-                          background: c.isHidden ? "#fef2f2" : "#f8fafc", 
-                          color: c.isHidden ? "#dc2626" : "#64748b"
-                        }}
-                      >
-                        {c.isHidden ? "🔒 Hidden" : "👁 Visible"}
-                      </button>
-                    </td>
+              </thead>
+              <tbody>
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan="4" style={{ ...s.td, textAlign: "center", padding: 40, color: "#9ca3af" }}>No courses found</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  paginatedCourses.map((c) => (
+                    <tr key={c.courseID} style={s.tr}>
+                      <td style={s.td}>
+                        <div style={{ fontWeight: 600, color: "#1e293b" }}>{c.title}</div>
+                        <div style={{ fontSize: 12, color: "#64748b" }}>
+                          {c.sectionCount || 0} sections · {c.enrolledCount || 0} enrolled
+                        </div>
+                      </td>
+                      <td style={s.td}>
+                        <span style={{ background: "#f1f5f9", padding: "4px 10px", borderRadius: 8, fontSize: 12, color: "#475569" }}>
+                          {c.categoryName}
+                        </span>
+                      </td>
+                      {/* Publish Toggle Switch */}
+                      <td style={s.td}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <ToggleSwitch
+                            checked={c.isPublished}
+                            disabled={actionLoading === c.courseID}
+                            onChange={() => handleTogglePublish(c.courseID)}
+                          />
+                          <span style={{ fontSize: 12, color: c.isPublished ? "#059669" : "#b45309", fontWeight: 500 }}>
+                            {c.isPublished ? "Published" : "Unpublished"}
+                          </span>
+                          {publishFeedback.id === c.courseID && (
+                            <span style={{ fontSize: 11, color: publishFeedback.msg === "✓" ? "#10b981" : "#ef4444", fontWeight: 600 }}>
+                              {publishFeedback.msg}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td style={s.td}>
+                        {/* Hide toggle */}
+                        <button 
+                          onClick={() => handleToggleHide(c.courseID)}
+                          disabled={actionLoading === c.courseID}
+                          style={{ 
+                            padding: "4px 10px", borderRadius: 12, fontSize: 11, fontWeight: 500, cursor: "pointer", border: "none",
+                            background: c.isHidden ? "#fef2f2" : "#f8fafc", 
+                            color: c.isHidden ? "#dc2626" : "#64748b"
+                          }}
+                        >
+                          {c.isHidden ? "🔒 Hidden" : "👁 Visible"}
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+
+            <Pagination
+              totalItems={filtered.length}
+              itemsPerPage={itemsPerPage}
+              currentPage={currentPage}
+              onChange={setCurrentPage}
+            />
+          </>
         )}
       </div>
 

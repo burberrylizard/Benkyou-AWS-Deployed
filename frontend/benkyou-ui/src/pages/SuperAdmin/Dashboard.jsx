@@ -120,31 +120,6 @@ export default function SuperAdminDashboard() {
             <div style={{ textAlign: "center", padding: 40, color: "#94a3b8" }}>No growth data yet</div>
           )}
         </div>
-
-        {/* Subscription Breakdown */}
-        <div style={s.tableCard}>
-          <div style={s.cardHeader}>
-            <div>
-              <h2 style={s.cardTitle}>Subscription Status</h2>
-              <p style={{ fontSize: 13, color: "#94a3b8", marginTop: 4 }}>Breakdown of tenant subscriptions</p>
-            </div>
-          </div>
-          {subscriptionData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={260}>
-              <PieChart>
-                <Pie data={subscriptionData} cx="50%" cy="50%" innerRadius={55} outerRadius={90} paddingAngle={4} dataKey="value" label={({ name, value }) => `${name}: ${value}`} labelLine={false}>
-                  {subscriptionData.map((entry, i) => (
-                    <Cell key={i} fill={subColors[entry.name] || COLORS[i % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip {...chartTooltipStyle} />
-                <Legend wrapperStyle={{ fontSize: 12, color: "#94a3b8" }} />
-              </PieChart>
-            </ResponsiveContainer>
-          ) : (
-            <div style={{ textAlign: "center", padding: 40, color: "#94a3b8" }}>No subscription data</div>
-          )}
-        </div>
       </div>
 
       {/* Role Distribution Bar Chart */}

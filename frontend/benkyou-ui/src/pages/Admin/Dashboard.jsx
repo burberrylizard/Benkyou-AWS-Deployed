@@ -94,33 +94,6 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      {/* Chart Section */}
-      <div style={{ ...s.tableCard, marginBottom: 24, padding: "24px" }}>
-        <div style={s.cardHeader}>
-          <h2 style={s.cardTitle}>Student Enrollment Trends</h2>
-          <span style={{ fontSize: 12, color: "#6b7280" }}>Last 6 months</span>
-        </div>
-        <div style={{ width: '100%', height: 300, marginTop: 20 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={trendData}>
-              <defs>
-                <linearGradient id="colorStudents" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} dy={10} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
-              <Tooltip 
-                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-              />
-              <Area type="monotone" dataKey="students" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorStudents)" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
       {/* Users + Courses */}
       <div style={s.twoCol}>
         {/* Users Table */}

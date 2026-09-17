@@ -10,3 +10,17 @@ export function createCategory(payload) {
     body: payload,
   });
 }
+
+export function updateCategory(id, payload) {
+  return apiRequest(`categories/${id}`, {
+    method: "PUT",
+    body: payload,
+  });
+}
+
+export function deleteCategory(id) {
+  return apiRequest(`categories/${id}`, {
+    method: "DELETE",
+  });
+}
+

@@ -7,6 +7,7 @@ import { getAssessments, createAssessment, deleteAssessment } from "../../servic
 import { getCourses } from "../../services/courseService";
 import { useAuth } from "../../context/AuthContext";
 import { useTenant } from "../../context/TenantContext";
+import Pagination from "../../components/shared/Pagination";
 
 export default function Assessments() {
   const { user: authUser } = useAuth();
@@ -19,9 +20,12 @@ export default function Assessments() {
   const [createError, setCreateError] = useState("");
   const [createForm, setCreateForm] = useState({ title: "", courseId: "", type: "Quiz" });
   const [creating, setCreating] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const list = assessments || [];
   const filtered = filter === "All" ? list : list.filter(a => (a.status || a.Status) === filter);
+  const paginatedList = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const handleCreate = async () => {
     if (!createForm.title || !createForm.courseId) {
@@ -88,7 +92,7 @@ export default function Assessments() {
           <h2 style={s.cardTitle}>All assessments</h2>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             {["All", "Published", "Draft"].map(f => (
-              <button key={f} onClick={() => setFilter(f)}
+              <button key={f} onClick={() => { setFilter(f); setCurrentPage(1); }}
                 style={{ background: filter === f ? "#185fa5" : "transparent", color: filter === f ? "#fff" : "#6b85a3", border: filter === f ? "none" : "1px solid #2a4060", padding: "6px 14px", borderRadius: 6, fontSize: 12, fontWeight: 500, cursor: "pointer" }}>
                 {f}
               </button>
@@ -100,35 +104,44 @@ export default function Assessments() {
         {filtered.length === 0 ? (
           <div style={{ textAlign: "center", padding: 50, color: "#5a7a9a" }}>No assessments found.</div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {filtered.map((a, i) => {
-              const aid = a.assessmentID || a.assessmentId;
-              return (
-                <div key={aid} style={{ display: "flex", alignItems: "center", gap: 16, padding: 16, borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(30,58,95,0.4)" }}>
-                  <div style={{ width: 44, height: 44, borderRadius: 10, background: `${["#3b82f6", "#8b5cf6", "#f59e0b", "#10b981"][i % 4]}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>📝</div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: "#e8edf4", marginBottom: 2 }}>{a.title}</div>
-                    <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-                      <span style={{ fontSize: 12, color: "#6b85a3" }}>{a.courseTitle}</span>
-                      <span style={{ fontSize: 12, color: "#5a7a9a" }}>Pass: {a.passingScore}%</span>
-                      <span style={{ fontSize: 12, color: "#5a7a9a" }}>Attempts: {a.maxAttempts}</span>
-                      {a.dueDate && <span style={{ fontSize: 11, color: "#f59e0b" }}>Due: {new Date(a.dueDate).toLocaleDateString()}</span>}
+          <div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {paginatedList.map((a, i) => {
+                const aid = a.assessmentID || a.assessmentId;
+                return (
+                  <div key={aid} style={{ display: "flex", alignItems: "center", gap: 16, padding: 16, borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(30,58,95,0.4)" }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 10, background: `${["#3b82f6", "#8b5cf6", "#f59e0b", "#10b981"][i % 4]}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>📝</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: "#e8edf4", marginBottom: 2 }}>{a.title}</div>
+                      <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 12, color: "#6b85a3" }}>{a.courseTitle}</span>
+                        <span style={{ fontSize: 12, color: "#5a7a9a" }}>Pass: {a.passingScore}%</span>
+                        <span style={{ fontSize: 12, color: "#5a7a9a" }}>Attempts: {a.maxAttempts}</span>
+                        {a.dueDate && <span style={{ fontSize: 11, color: "#f59e0b" }}>Due: {new Date(a.dueDate).toLocaleDateString()}</span>}
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
+                      <StatusBadge status={a.status || a.Status} />
+                      <button onClick={() => navigate(tenantPath(`/instructor/assessments/${aid}/builder`))}
+                        style={{ background: "transparent", color: "#5b9bd5", border: "1px solid #2a4060", padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer" }}>
+                        Edit
+                      </button>
+                      <button onClick={() => handleDelete(aid)}
+                        style={{ background: "transparent", color: "#ef4444", border: "1px solid rgba(239,68,68,0.3)", padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer" }}>
+                        Delete
+                      </button>
                     </div>
                   </div>
-                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
-                    <StatusBadge status={a.status || a.Status} />
-                    <button onClick={() => navigate(tenantPath(`/instructor/assessments/${aid}/builder`))}
-                      style={{ background: "transparent", color: "#5b9bd5", border: "1px solid #2a4060", padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer" }}>
-                      Edit
-                    </button>
-                    <button onClick={() => handleDelete(aid)}
-                      style={{ background: "transparent", color: "#ef4444", border: "1px solid rgba(239,68,68,0.3)", padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer" }}>
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+
+            <Pagination
+              totalItems={filtered.length}
+              itemsPerPage={itemsPerPage}
+              currentPage={currentPage}
+              onChange={setCurrentPage}
+            />
           </div>
         )}
       </div>

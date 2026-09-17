@@ -4,6 +4,8 @@ import { OP_THEME, getNav, OP_STYLES as s } from "./operatorConfig";
 import { 
   getOperatorStudents, 
   createStudent, 
+  updateStudent,
+  deleteStudent,
   activateStudent, 
   deactivateStudent, 
   resetStudentPassword 
@@ -24,8 +26,21 @@ export default function ManageStudents() {
 
   // Modals state
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
+
+  // Edit form fields
+  const [editStudentData, setEditStudentData] = useState({
+    id: "",
+    firstName: "",
+    lastName: "",
+    email: "",
+    studentNumber: "",
+    yearEnrolled: "",
+    yearLevel: "",
+    program: "",
+  });
 
   // Add form fields
   const [newStudent, setNewStudent] = useState({
@@ -112,6 +127,62 @@ export default function ManageStudents() {
       alert("Student created successfully!");
     } catch (err) {
       alert("Failed to create student: " + (err.message || err));
+    }
+  };
+
+  const handleOpenEdit = (student) => {
+    const nameParts = (student.fullName || "").split(" ");
+    const firstName = nameParts[0] || "";
+    const lastName = nameParts.slice(1).join(" ") || "";
+    setEditStudentData({
+      id: student.id,
+      firstName,
+      lastName,
+      email: student.email || "",
+      studentNumber: student.studentNumber || "",
+      yearEnrolled: student.yearEnrolled || new Date().getFullYear(),
+      yearLevel: student.yearLevel || getYearLevelsList(orgType)[0],
+      program: student.program || "",
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUpdateStudent = async (e) => {
+    e.preventDefault();
+    if (!editStudentData.firstName || !editStudentData.lastName || !editStudentData.email) {
+      alert("Please fill in First Name, Last Name, and Email.");
+      return;
+    }
+
+    try {
+      await updateStudent(editStudentData.id, {
+        firstName: editStudentData.firstName,
+        lastName: editStudentData.lastName,
+        email: editStudentData.email,
+        studentNumber: editStudentData.studentNumber,
+        yearEnrolled: editStudentData.yearEnrolled ? parseInt(editStudentData.yearEnrolled) : null,
+        yearLevel: editStudentData.yearLevel,
+        program: editStudentData.program,
+      });
+      setShowEditModal(false);
+      fetchStudents();
+      alert("Student updated successfully!");
+    } catch (err) {
+      alert("Failed to update student: " + (err.message || err));
+    }
+  };
+
+  const handleDeleteStudent = async (student) => {
+    if (!window.confirm(`Are you sure you want to delete ${student.fullName}? This will remove the student account and profile permanently.`)) {
+      return;
+    }
+
+    try {
+      await deleteStudent(student.id);
+      fetchStudents();
+      alert("Student deleted successfully!");
+    } catch (err) {
+      alert("Failed to delete student: " + (err.message || err));
     }
   };
 
@@ -242,7 +313,13 @@ export default function ManageStudents() {
                         </span>
                       </td>
                       <td style={s.td}>
-                        <div style={{ display: "flex", gap: 8 }}>
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                          <button
+                            style={{ ...s.outlineBtn, padding: "6px 12px", fontSize: 12, borderColor: "#5b9bd5", color: "#5b9bd5" }}
+                            onClick={() => handleOpenEdit(student)}
+                          >
+                            Edit
+                          </button>
                           <button
                             style={{
                               ...s.outlineBtn,
@@ -263,6 +340,12 @@ export default function ManageStudents() {
                             }}
                           >
                             Reset Password
+                          </button>
+                          <button
+                            style={{ ...s.outlineBtn, padding: "6px 12px", fontSize: 12, borderColor: "rgba(239, 68, 68, 0.5)", color: "#ef4444" }}
+                            onClick={() => handleDeleteStudent(student)}
+                          >
+                            Delete
                           </button>
                         </div>
                       </td>
@@ -392,6 +475,121 @@ export default function ManageStudents() {
                   className="btn-hover-dl"
                 >
                   Create {term.student}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT STUDENT MODAL */}
+      {showEditModal && (
+        <div style={s.modalOverlay}>
+          <div style={s.modalContent}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+              <h3 style={{ fontSize: 18, fontWeight: 600, color: "#e8edf4" }}>Edit {term.student} Details</h3>
+              <button 
+                onClick={() => setShowEditModal(false)}
+                style={{ background: "transparent", border: "none", color: "#7a8ba3", fontSize: 20, cursor: "pointer" }}
+              >
+                &times;
+              </button>
+            </div>
+            
+            <form onSubmit={handleUpdateStudent}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <div style={s.formGroup}>
+                  <label style={s.label}>First Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editStudentData.firstName}
+                    onChange={(e) => setEditStudentData({ ...editStudentData, firstName: e.target.value })}
+                    style={s.input}
+                  />
+                </div>
+                <div style={s.formGroup}>
+                  <label style={s.label}>Last Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editStudentData.lastName}
+                    onChange={(e) => setEditStudentData({ ...editStudentData, lastName: e.target.value })}
+                    style={s.input}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <div style={s.formGroup}>
+                  <label style={s.label}>Email Address *</label>
+                  <input
+                    type="email"
+                    required
+                    value={editStudentData.email}
+                    onChange={(e) => setEditStudentData({ ...editStudentData, email: e.target.value })}
+                    style={s.input}
+                  />
+                </div>
+                <div style={s.formGroup}>
+                  <label style={s.label}>{term.student} ID / Number</label>
+                  <input
+                    type="text"
+                    value={editStudentData.studentNumber}
+                    onChange={(e) => setEditStudentData({ ...editStudentData, studentNumber: e.target.value })}
+                    style={s.input}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <div style={s.formGroup}>
+                  <label style={s.label}>Year Enrolled</label>
+                  <input
+                    type="number"
+                    value={editStudentData.yearEnrolled}
+                    onChange={(e) => setEditStudentData({ ...editStudentData, yearEnrolled: e.target.value })}
+                    style={s.input}
+                  />
+                </div>
+                <div style={s.formGroup}>
+                  <label style={s.label}>{term.yearLevel}</label>
+                  <select
+                    value={editStudentData.yearLevel}
+                    onChange={(e) => setEditStudentData({ ...editStudentData, yearLevel: e.target.value })}
+                    style={s.select}
+                  >
+                    {distinctYearLevels.map(y => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div style={s.formGroup}>
+                <label style={s.label}>{term.program} / Group</label>
+                <input
+                  type="text"
+                  value={editStudentData.program}
+                  onChange={(e) => setEditStudentData({ ...editStudentData, program: e.target.value.toUpperCase() })}
+                  style={s.input}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 24 }}>
+                <button 
+                  type="button" 
+                  style={s.outlineBtn} 
+                  onClick={() => setShowEditModal(false)}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  style={s.primaryBtn}
+                  className="btn-hover-dl"
+                >
+                  Save Changes
                 </button>
               </div>
             </form>

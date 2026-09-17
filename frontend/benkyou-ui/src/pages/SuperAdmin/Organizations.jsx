@@ -5,6 +5,7 @@ import { useApiData } from "../../hooks/useApiData";
 import { getOrganizations } from "../../services/organizationService";
 import { useAuth } from "../../context/AuthContext";
 import { apiRequest } from "../../api/client";
+import Pagination from "../../components/shared/Pagination";
 
 const localS = {
   overlay: { position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 },
@@ -20,6 +21,8 @@ export default function OrganizationsManagement() {
   const [newOrg, setNewOrg] = useState({ name: "", tenantCode: "", primaryEmail: "", password: "" });
   const [isCreating, setIsCreating] = useState(false);
   const [updating, setUpdating] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -56,6 +59,9 @@ export default function OrganizationsManagement() {
       <div style={{ textAlign: "center", padding: 50 }}>Loading tenants...</div>
     </DashboardLayout>
   );
+
+  const displayOrgs = organizations || [];
+  const paginatedOrgs = displayOrgs.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
     <DashboardLayout 
@@ -142,37 +148,49 @@ export default function OrganizationsManagement() {
             </tr>
           </thead>
           <tbody>
-            {(organizations || []).map((org) => (
-              <tr key={org.tenantID} style={s.tr}>
-                <td style={{ ...s.td, fontWeight: 500, color: "#f1f5f9" }}>{org.name}</td>
-                <td style={s.td}><code style={{ background: "#334155", color: "#e2e8f0", padding: "2px 6px", borderRadius: 4 }}>{org.tenantCode}</code></td>
-                <td style={s.td}>{org.primaryEmail}</td>
-                <td style={s.td}>{new Date(org.createdAt).toLocaleDateString()}</td>
-                <td style={s.td}>
-                  <span style={org.isActive ? s.statusActive : s.statusInactive}>
-                    {org.isActive ? "ACTIVE" : "INACTIVE"}
-                  </span>
-                </td>
-                <td style={s.td}>
-                  <button 
-                    disabled={updating === org.tenantID}
-                    onClick={() => toggleStatus(org)}
-                    style={{ 
-                      ...s.outlineBtn, 
-                      fontSize: 12, 
-                      padding: "4px 10px",
-                      color: org.isActive ? "#dc2626" : "#059669",
-                      borderColor: org.isActive ? "#fca5a5" : "#6ee7b7"
-                    }}
-                  >
-                    {updating === org.tenantID ? "..." : org.isActive ? "Deactivate" : "Activate"}
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {displayOrgs.length === 0 ? (
+              <tr><td colSpan="6" style={{ textAlign: "center", padding: 40, color: "#94a3b8" }}>No organizations found.</td></tr>
+            ) : (
+              paginatedOrgs.map((org) => (
+                <tr key={org.tenantID} style={s.tr}>
+                  <td style={{ ...s.td, fontWeight: 500, color: "#f1f5f9" }}>{org.name}</td>
+                  <td style={s.td}><code style={{ background: "#334155", color: "#e2e8f0", padding: "2px 6px", borderRadius: 4 }}>{org.tenantCode}</code></td>
+                  <td style={s.td}>{org.primaryEmail}</td>
+                  <td style={s.td}>{new Date(org.createdAt).toLocaleDateString()}</td>
+                  <td style={s.td}>
+                    <span style={org.isActive ? s.statusActive : s.statusInactive}>
+                      {org.isActive ? "ACTIVE" : "INACTIVE"}
+                    </span>
+                  </td>
+                  <td style={s.td}>
+                    <button 
+                      disabled={updating === org.tenantID}
+                      onClick={() => toggleStatus(org)}
+                      style={{ 
+                        ...s.outlineBtn, 
+                        fontSize: 12, 
+                        padding: "4px 10px",
+                        color: org.isActive ? "#dc2626" : "#059669",
+                        borderColor: org.isActive ? "#fca5a5" : "#6ee7b7"
+                      }}
+                    >
+                      {updating === org.tenantID ? "..." : org.isActive ? "Deactivate" : "Activate"}
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
+
+        <Pagination
+          totalItems={displayOrgs.length}
+          itemsPerPage={itemsPerPage}
+          currentPage={currentPage}
+          onChange={setCurrentPage}
+        />
       </div>
     </DashboardLayout>
   );
 }
+

@@ -110,6 +110,17 @@ input, select, textarea {
   font-size: 1rem;
 }
 
+/* Global High Contrast Form Controls */
+select option {
+  background-color: #0f172a;
+  color: #ffffff;
+}
+
+input::placeholder, textarea::placeholder {
+  color: #94a3b8;
+  opacity: 1;
+}
+
 /* Scrollbar Styling */
 ::-webkit-scrollbar {
   width: 8px;

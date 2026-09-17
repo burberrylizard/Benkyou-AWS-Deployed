@@ -15,6 +15,21 @@ export function createStudent(payload) {
   });
 }
 
+// Update student account details
+export function updateStudent(id, payload) {
+  return apiRequest(`operator/students/${id}`, {
+    method: "PUT",
+    body: payload,
+  });
+}
+
+// Delete student account
+export function deleteStudent(id) {
+  return apiRequest(`operator/students/${id}`, {
+    method: "DELETE",
+  });
+}
+
 // Import students bulk CSV / Excel
 export function importStudents(file) {
   const formData = new FormData();

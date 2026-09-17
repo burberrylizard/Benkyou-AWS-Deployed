@@ -6,12 +6,15 @@ import { getUsers, createUser, updateUser, deactivateUser, unlockUser, adminChan
 import { useAuth } from "../../context/AuthContext";
 import Modal from "../../components/shared/UI/Modal";
 import Button from "../../components/shared/UI/Button";
+import Pagination from "../../components/shared/Pagination";
 
 export default function Users() {
   const { user: authUser } = useAuth();
   const { data: users, isLoading, reload } = useApiData(getUsers);
   const [filter, setFilter] = useState("All");
   const [toastMessage, setToastMessage] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -179,7 +182,7 @@ export default function Users() {
             {["All", "Instructor", "Student", "Operator"].map((tab) => (
               <button 
                 key={tab} 
-                onClick={() => setFilter(tab)} 
+                onClick={() => { setFilter(tab); setCurrentPage(1); }} 
                 style={{ 
                   padding: "6px 14px", 
                   borderRadius: 20, 
@@ -201,73 +204,82 @@ export default function Users() {
         {isLoading ? (
           <div style={{ padding: 40, textAlign: "center", color: "#6b7280" }}>Loading users...</div>
         ) : (
-          <table style={s.table}>
-            <thead>
-              <tr>
-                <th style={s.th}>USER</th>
-                <th style={s.th}>ROLE</th>
-                <th style={s.th}>PROGRAM</th>
-                <th style={s.th}>YEAR LEVEL</th>
-                <th style={s.th}>STATUS</th>
-                <th style={s.th}>JOINED</th>
-                <th style={s.th}>ACTIONS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.length === 0 ? (
+          <>
+            <table style={s.table}>
+              <thead>
                 <tr>
-                  <td colSpan="5" style={{ ...s.td, textAlign: "center", padding: 40, color: "#9ca3af" }}>No users found</td>
+                  <th style={s.th}>USER</th>
+                  <th style={s.th}>ROLE</th>
+                  <th style={s.th}>PROGRAM</th>
+                  <th style={s.th}>YEAR LEVEL</th>
+                  <th style={s.th}>STATUS</th>
+                  <th style={s.th}>JOINED</th>
+                  <th style={s.th}>ACTIONS</th>
                 </tr>
-              ) : (
-                filtered.map((u, i) => (
-                  <tr key={i} style={s.tr}>
-                    <td style={s.td}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <div style={{ ...s.tinyAvatar, background: "#185fa5", color: "#fff" }}>
-                          {u.firstName?.charAt(0)}{u.lastName?.charAt(0)}
-                        </div>
-                        <div>
-                          <div style={{ fontWeight: 500, color: "#111827" }}>{u.firstName} {u.lastName}</div>
-                          <div style={{ fontSize: 12, color: "#9ca3af" }}>{u.email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td style={s.td}><RoleBadge role={u.role} /></td>
-                    <td style={s.td}><span style={{ color: "#4b5563", fontWeight: 500 }}>{u.role === "Student" ? (u.program || "—") : ""}</span></td>
-                    <td style={s.td}><span style={{ color: "#4b5563", fontWeight: 500 }}>{u.role === "Student" ? (u.yearLevel || "—") : ""}</span></td>
-                    <td style={s.td}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <StatusBadge status={u.isActive ? "Active" : "Inactive"} />
-                        {u._isLocked && (
-                          <span
-                            title={u.lockoutEnd ? `Locked until ${new Date(u.lockoutEnd).toLocaleString()} | Failed attempts: ${u.failedLoginAttempts || 0}` : `Locked | Failed attempts: ${u.failedLoginAttempts || 0}`}
-                            style={{ background: "#fee2e2", color: "#ef4444", border: "1px solid #fca5a5", padding: "4px 10px", borderRadius: 12, fontSize: 12, fontWeight: 500, display: "inline-flex", alignItems: "center", gap: 4, cursor: "help", position: "relative" }}
-                          >
-                            🔒 Locked
-                            {u.lockoutEnd && (
-                              <span style={{ fontSize: 10, opacity: 0.8, marginLeft: 2 }}>
-                                until {new Date(u.lockoutEnd).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              </span>
-                            )}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td style={s.td}><span style={{ color: "#6b7280" }}>{new Date(u.createdAt).toLocaleDateString()}</span></td>
-                    <td style={s.td}>
-                      <div style={{ display: "flex", gap: 8 }}>
-                        <button onClick={() => handleOpenModal(u)} style={s.actionBtn}>Edit</button>
-                        <button onClick={() => handleDeactivate(u.id)} style={{...s.actionBtn, color: u.isActive ? "#ef4444" : "#10b981"}}>{u.isActive ? "Disable" : "Enable"}</button>
-                        {u._isLocked && (
-                          <button onClick={() => handleUnlock(u.id)} style={{...s.actionBtn, color: "#7c3aed"}}>Unlock Account</button>
-                        )}
-                      </div>
-                    </td>
+              </thead>
+              <tbody>
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" style={{ ...s.td, textAlign: "center", padding: 40, color: "#9ca3af" }}>No users found</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((u, i) => (
+                    <tr key={i} style={s.tr}>
+                      <td style={s.td}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <div style={{ ...s.tinyAvatar, background: "#185fa5", color: "#fff" }}>
+                            {u.firstName?.charAt(0)}{u.lastName?.charAt(0)}
+                          </div>
+                          <div>
+                            <div style={{ fontWeight: 500, color: "#111827" }}>{u.firstName} {u.lastName}</div>
+                            <div style={{ fontSize: 12, color: "#9ca3af" }}>{u.email}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td style={s.td}><RoleBadge role={u.role} /></td>
+                      <td style={s.td}><span style={{ color: "#4b5563", fontWeight: 500 }}>{u.role === "Student" ? (u.program || "—") : ""}</span></td>
+                      <td style={s.td}><span style={{ color: "#4b5563", fontWeight: 500 }}>{u.role === "Student" ? (u.yearLevel || "—") : ""}</span></td>
+                      <td style={s.td}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <StatusBadge status={u.isActive ? "Active" : "Inactive"} />
+                          {u._isLocked && (
+                            <span
+                              title={u.lockoutEnd ? `Locked until ${new Date(u.lockoutEnd).toLocaleString()} | Failed attempts: ${u.failedLoginAttempts || 0}` : `Locked | Failed attempts: ${u.failedLoginAttempts || 0}`}
+                              style={{ background: "#fee2e2", color: "#ef4444", border: "1px solid #fca5a5", padding: "4px 10px", borderRadius: 12, fontSize: 12, fontWeight: 500, display: "inline-flex", alignItems: "center", gap: 4, cursor: "help", position: "relative" }}
+                            >
+                              🔒 Locked
+                              {u.lockoutEnd && (
+                                <span style={{ fontSize: 10, opacity: 0.8, marginLeft: 2 }}>
+                                  until {new Date(u.lockoutEnd).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              )}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td style={s.td}><span style={{ color: "#6b7280" }}>{new Date(u.createdAt).toLocaleDateString()}</span></td>
+                      <td style={s.td}>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button onClick={() => handleOpenModal(u)} style={s.actionBtn}>Edit</button>
+                          <button onClick={() => handleDeactivate(u.id)} style={{...s.actionBtn, color: u.isActive ? "#ef4444" : "#10b981"}}>{u.isActive ? "Disable" : "Enable"}</button>
+                          {u._isLocked && (
+                            <button onClick={() => handleUnlock(u.id)} style={{...s.actionBtn, color: "#7c3aed"}}>Unlock Account</button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+
+            <Pagination
+              totalItems={filtered.length}
+              itemsPerPage={itemsPerPage}
+              currentPage={currentPage}
+              onChange={setCurrentPage}
+            />
+          </>
         )}
       </div>
 

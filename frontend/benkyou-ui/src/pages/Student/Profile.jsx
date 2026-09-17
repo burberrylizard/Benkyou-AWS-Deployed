@@ -7,7 +7,7 @@ import { getDashboardSummary } from "../../services/dashboardService";
 import { updateProfile, changeOwnPassword, uploadProfilePhoto } from "../../services/userService";
 
 export default function StudentProfile() {
-  const { user: authUser, refreshUser } = useAuth();
+  const { user: authUser, updateUserSession } = useAuth();
   const { data, isLoading } = useApiData(getDashboardSummary);
 
   // Edit profile state
@@ -45,15 +45,24 @@ export default function StudentProfile() {
     setSavingProfile(true);
     setProfileMsg({ type: "", text: "" });
     try {
-      await updateProfile({
+      const res = await updateProfile({
         ...profileForm,
         yearEnrolled: profileForm.yearEnrolled ? parseInt(profileForm.yearEnrolled) : null,
         yearLevel: profileForm.yearLevel || null,
         program: profileForm.program || null
       });
+      if (updateUserSession && res) {
+        updateUserSession({
+          firstName: res.firstName || profileForm.firstName,
+          lastName: res.lastName || profileForm.lastName,
+          name: res.name || `${profileForm.firstName} ${profileForm.lastName}`,
+          yearEnrolled: res.yearEnrolled || (profileForm.yearEnrolled ? parseInt(profileForm.yearEnrolled) : null),
+          yearLevel: res.yearLevel || profileForm.yearLevel,
+          program: res.program || profileForm.program
+        });
+      }
       setProfileMsg({ type: "success", text: "Profile updated successfully." });
       setEditMode(false);
-      if (refreshUser) refreshUser();
     } catch (err) {
       setProfileMsg({ type: "error", text: err.message || "Failed to update profile." });
     } finally {
