@@ -48,7 +48,7 @@ namespace Benkyou.Data
                 e.HasKey(x => x.TenantID);
 
                 e.Property(x => x.TenantID)
-                    .HasDefaultValueSql("NEWID()")
+                    .HasDefaultValueSql("gen_random_uuid()")
                     .ValueGeneratedOnAdd();
 
                 e.HasIndex(x => x.TenantID).IsUnique();
