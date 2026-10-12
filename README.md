@@ -11,6 +11,8 @@ This document describes the cloud architecture and step-by-step process for depl
 * **Database:** Managed AWS RDS for PostgreSQL (`db.t4g.micro`, AWS Free Tier, Sydney `ap-southeast-2`).
 * **Process Manager:** Linux `systemd` daemon (`benkyou.service`) ensuring the .NET Kestrel backend runs continuously in the background on port `5000` with auto-restart on system boot.
 * **Reverse Proxy:** NGINX on port `80`/`443` (routes static SPA frontend assets, proxies REST API traffic to `/api/`, and handles WebSocket upgrades for SignalR real-time hubs on `/hubs/`).
+* **File Storage:** Amazon S3 (Cloud Object Storage for curriculum documents, downloadable syllabus files, and automated database backups).
+* **IAM Security:** EC2 Instance Role with AWS S3 Access Policy (enables secure, keyless cloud storage access without hardcoded credentials).
 * **Security & SSL:** Let's Encrypt SSL certificate via Certbot (HTTPS encryption) with DNS routing.
 * **Third-Party Services:** Resend API (Transactional 2FA OTP emails), Stripe API (Tenant subscriptions), Cloudinary (CDN media storage).
 * **Network & Firewall:** AWS EC2 Security Group (Ports `22`, `80`, `443`) and AWS RDS Security Group (Port `5432`).
@@ -36,16 +38,17 @@ This document describes the cloud architecture and step-by-step process for depl
         │             ▼               ▼ location /hubs/    │
         │     [ React 19 SPA ]     [ ASP.NET Core 8 API ]  │
         │     (/var/www/html)      (Kestrel :5000)         │
-        │                                 │                │
-        └─────────────────────────────────┼────────────────┘
-                                          │
-                         Encrypted SQL Connection (Port 5432)
-                                          │
-                                          ▼
-                         ┌─────────────────────────────────┐
-                         │    AWS RDS PostgreSQL Engine    │
-                         │          (benkyoudb)            │
-                         └─────────────────────────────────┘
+        │                                 │   │            │
+        │                                 │   └───► [ IAM Role ]
+        └─────────────────────────────────┼─────────────┬──┘
+                                          │             │
+                         Encrypted SQL Connection       │ S3 Put/Get Object
+                                          │             │ (Port 443)
+                                          ▼             ▼
+                         ┌─────────────────┐   ┌─────────────────┐
+                         │  AWS RDS PG DB  │   │    Amazon S3    │
+                         │   (benkyoudb)   │   │  (File Storage) │
+                         └─────────────────┘   └─────────────────┘
                                           │
                         ┌─────────────────┴─────────────────┐
                         ▼                                   ▼
@@ -298,7 +301,86 @@ sudo certbot --nginx -d YOUR_DOMAIN.duckdns.org
 
 ---
 
-# 8. Maintenance & Useful Commands
+# 8. Configuring Amazon S3 for File Uploads & Backups
+
+### Step 1: Create S3 Bucket
+1. In the **AWS Management Console**, navigate to **Amazon S3** -> click **Create bucket**.
+2. **Bucket name:** `benkyou-storage-charlize` *(globally unique lowercase name)*.
+3. **AWS Region:** Select `ap-southeast-2` (Asia Pacific - Sydney, matching EC2 and RDS).
+4. Configure CORS or bucket permissions as needed for application access.
+5. Click **Create bucket**.
+
+---
+
+### Step 2: Create IAM Role for EC2
+To follow AWS security best practices, the EC2 instance accesses S3 securely without hardcoding secret keys:
+
+1. Go to **AWS IAM** -> **Roles** -> click **Create role**.
+2. Select **AWS service** as the trusted entity.
+3. Select **EC2** as the common use case -> click **Next**.
+4. Attach the custom S3 Policy (or `AmazonS3FullAccess`):
+
+#### Example S3 Policy (Least Privilege)
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject",
+        "s3:GetObject",
+        "s3:DeleteObject"
+      ],
+      "Resource": "arn:aws:s3:::benkyou-storage-charlize/*"
+    }
+  ]
+}
+```
+5. Name the role **`EC2-S3-Access-Role`** and click **Create role**.
+
+---
+
+### Step 3: Attach IAM Role to EC2 Instance
+1. In **Amazon EC2**, go to **Instances** -> select `benkyou-server`.
+2. Click **Actions** -> **Security** -> **Modify IAM role**.
+3. Choose **`EC2-S3-Access-Role`** from the dropdown.
+4. Click **Update IAM role**.
+
+---
+
+### Step 4: Interacting with S3 from EC2 (AWS CLI & Backend SDK)
+
+#### 1. Via AWS CLI (Automated Backups & File Sync):
+```bash
+# Install AWS CLI on the EC2 server
+sudo apt install -y awscli
+
+# Verify keyless access provided by EC2 IAM Role
+aws s3 ls
+
+# Upload file directly to S3
+aws s3 cp /var/www/benkyou/test.txt s3://benkyou-storage-charlize/
+```
+
+#### 2. Via Backend AWS SDK (`AWSSDK.S3`):
+Install the official AWS SDK package:
+```bash
+dotnet add package AWSSDK.S3
+```
+
+Configure keyless S3 client (the AWS SDK automatically retrieves temporary credentials from the attached EC2 IAM Role):
+```csharp
+using Amazon;
+using Amazon.S3;
+
+// No hardcoded credentials needed - EC2 IAM Role provides them automatically
+var s3Client = new AmazonS3Client(RegionEndpoint.APSoutheast2);
+```
+
+---
+
+# 9. Maintenance & Useful Commands
 
 * **Check Backend Status:**
   ```bash
